@@ -1226,6 +1226,54 @@ impl GooseUser {
         Ok(self.request(goose_request).await?)
     }
 
+    /// A helper to make a `POST` request of a multipart form on a path and collect relevant
+    /// metrics. Automatically prepends the correct host.
+    ///
+    /// Calls to `post()` return a [`GooseResponse`](./struct.GooseResponse.html) object which
+    /// contains a copy of the request you made ([`GooseRequestMetric`](./struct.GooseRequestMetric.html)),
+    /// and the response ([`reqwest::Response`](https://docs.rs/reqwest/*/reqwest/struct.Response.html)).
+    ///
+    /// If you need to set headers, change timeouts, or otherwise make use of the
+    /// [`reqwest::RequestBuilder`](https://docs.rs/reqwest/*/reqwest/struct.RequestBuilder.html)
+    /// object, refer to [`GooseUser::get_request_builder`].
+    ///
+    /// # Example
+    /// POST a multipart form.
+    /// ```rust
+    /// use goose::prelude::*;
+    ///
+    /// let mut task = task!(post_function);
+    ///
+    /// /// A very simple task that makes a POST request with a multipart form.
+    /// async fn post_function(user: &mut GooseUser) -> GooseTaskResult {
+    ///     let form = reqwest::multipart::Form::new().text("name", "foo");
+    ///     let _goose = user.post_multipart_form("path/to/foo/", form).await?;
+    ///
+    ///     Ok(())
+    /// }
+    /// ```    
+    pub async fn post_multipart_form(
+        &mut self,
+        path: &str,
+        multipart_form: reqwest::multipart::Form,
+    ) -> Result<GooseResponse, GooseTaskError> {
+        // Build a Reqwest RequestBuilder object.
+        let url = self.build_url(path)?;
+        let reqwest_request_builder = self.client.post(url);
+
+        // POST multipart form request.
+        let goose_request = GooseRequest::builder()
+            .method(GooseMethod::Post)
+            .set_request_builder(
+                reqwest_request_builder
+                    .multipart(multipart_form)
+            )
+            .build();
+
+        // Make the request and return the GooseResponse.
+        Ok(self.request(goose_request).await?)
+    }
+    
     /// A helper to make a `POST` request of a form on a path and collect relevant metrics.
     /// Automatically prepends the correct host.
     ///
